@@ -1,0 +1,6 @@
+# 生成视频与测试产物
+out/
+# macOS
+.DS_Store
+# 依赖（本插件零依赖，预防性排除）
+node_modules/

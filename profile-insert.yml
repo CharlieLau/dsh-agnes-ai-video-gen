@@ -1,0 +1,20 @@
+# Standalone patch layer for the dsh-agnes-ai-video-gen plugin.
+#
+# For a headless/one-off run:
+#   dsh --profile headless --patch ~/work/dsh/plugins/dsh-agnes-ai-video-gen/cordis.patch.yml "画一段海浪视频"
+#
+# For a long-lived profile, copy the same `insert` entry into
+# ~/.dsh/profiles/<profile>/cordis.patch.yml so it survives restarts.
+#
+# The API key is never written here: `apiKeyRef` names a credential the
+# harness resolves from ~/.dsh/.credentials.yaml, ~/.dsh/.env, or the
+# process environment. It shares AGNES_API_KEY with dsh-agnes-ai-image-gen.
+- insert:
+    - id: video-gen
+      name: /Users/charlie/work/dsh/plugins/dsh-agnes-ai-video-gen/lib/index.js
+      config:
+        baseUrl: https://api.agnes-ai.cn
+        model: agnes-video-2.5-flash
+        outputDir: out/videos
+        apiKeyRef: AGNES_API_KEY
+        timeoutMs: 600000

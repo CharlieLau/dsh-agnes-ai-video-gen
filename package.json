@@ -1,0 +1,13 @@
+{
+  "name": "dsh-agnes-ai-video-gen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Model-facing generate_video tool for the DeepSeek Harness, backed by the Agnes AI video API (agnes-video-2.5-flash)",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,16 @@
+
+# 生视频插件 —— generate_video（Agnes Video 2.5 Flash）。
+# 插件本体在工作区，loader 按绝对路径直接 import，不经过 profile 的 node_modules，
+# 所以不需要 `dsh plugin add`、不需要 pnpm、不写 lockfile。
+# API key 不落在本文件：apiKeyRef 指向凭据引用 AGNES_API_KEY（与生图插件共用同一个 key），
+# 由 dsh-credentials-local 从 ~/.dsh/.credentials.yaml / ~/.dsh/.env / 进程环境解析。
+# 文档：~/work/dsh/plugins/dsh-agnes-ai-video-gen/README.md
+- insert:
+    - id: video-gen
+      name: /Users/charlie/work/dsh/plugins/dsh-agnes-ai-video-gen/lib/index.js
+      config:
+        baseUrl: https://api.agnes-ai.cn
+        model: agnes-video-2.5-flash
+        outputDir: out/videos
+        apiKeyRef: AGNES_API_KEY
+        timeoutMs: 600000
