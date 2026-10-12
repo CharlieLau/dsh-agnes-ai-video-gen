@@ -128,6 +128,7 @@ for (const [label, args] of [
 
 console.log('reference materialization')
 const { toReferenceMedia, materializeReferences, mp4LooksValid } = plugin.internals
+
 {
   // A 1x1 PNG, so the data URI is a real image rather than a placeholder.
   const png = Buffer.from(
@@ -179,6 +180,55 @@ const { toReferenceMedia, materializeReferences, mp4LooksValid } = plugin.intern
   check(mp4LooksValid(png) === false, 'a PNG is not mistaken for an mp4')
   const ftyp = new Uint8Array([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0, 0, 0, 0, 0, 0, 0, 0])
   check(mp4LooksValid(ftyp) === true, 'bytes with an ftyp box look like an mp4')
+}
+
+console.log('polling survives rate limiting')
+{
+  const { pollVideoTask } = plugin.internals
+  const settings = {
+    baseUrl: 'https://api.example.test',
+    model: 'agnes-video-2.5-flash',
+    // 压缩退避表，否则这组用例要真睡一分多钟。
+    pollIntervalMs: 1,
+    pollIntervalMaxMs: 2,
+    pollBackoff: 1.5,
+  }
+  const realFetch = globalThis.fetch
+  /** 用假的 fetch 替掉网络，按脚本逐次作答。 */
+  const stub = (script) => {
+    let index = 0
+    globalThis.fetch = async () => {
+      const step = script[index++]
+      if (step === undefined) throw new Error(`stub exhausted after ${index} calls`)
+      if (step === 429 || step === 503 || step === 500) {
+        return { ok: false, status: step, text: async () => `{"error":{"code":${step}}}` }
+      }
+      return { ok: true, status: 200, text: async () => JSON.stringify(step) }
+    }
+    return () => index
+  }
+  const started = Date.now()
+  try {
+    // 连续 6 次限流（远超旧的 3 次上限）之后任务完成 —— 必须仍然拿到结果。
+    const calls = stub([429, 429, 429, 429, 429, 429, { status: 'completed', url: 'https://cdn.test/v.mp4' }])
+    const done = await pollVideoTask(settings, 'k', 'task_x', new AbortController().signal)
+    check(done.url === 'https://cdn.test/v.mp4', '429 does not abort a task that later completes')
+    check(calls() === 7, `kept polling through 6 rate limits (saw ${calls()} polls)`)
+
+    // 非限流错误仍然只容忍 3 次，但要带上任务号，便于手动查回。
+    stub([500, 500, 500, { status: 'completed', url: 'https://cdn.test/never.mp4' }])
+    let message = ''
+    try {
+      await pollVideoTask(settings, 'k', 'task_keepme', new AbortController().signal)
+    } catch (error) {
+      message = error.message
+    }
+    check(message.includes('task_keepme'), 'giving up names the task id so it can be queried by hand')
+    check(message.includes('仍在生成'), 'giving up says the task may still be running')
+  } finally {
+    globalThis.fetch = realFetch
+  }
+  console.log(`  （轮询用例耗时 ${Date.now() - started}ms —— 退避表把等待压短了）`)
 }
 
 if (offline) {
